@@ -12,16 +12,21 @@ import org.springframework.data.domain.Pageable;
 
 import jakarta.validation.Valid;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 //import java.util.List;
 
 @RestController // bu class artık API olacak
 @RequestMapping("/api/products") // base url
 @RequiredArgsConstructor
+@Tag(name = "Product API", description = "Urun yonetimi islemleri")
 public class ProductController {
 
     private final IProductService productService;
 
     // ürün oluştur
+    @Operation(summary = "Yeni ürün oluştur", description = "Yeni bir ürün ekler")
     @PostMapping
     public ProductResponse createProduct(@Valid @RequestBody CreateProductRequest request) {
         return productService.createProduct(request);
@@ -34,6 +39,7 @@ public class ProductController {
     //}
 
     // ürünleri sayfalı getir
+    @Operation(summary = "Sayfalı ürün listesi", description = "Ürünleri sayfalı şekilde getirir")
     @GetMapping("/page")
     public Page<ProductResponse> getProductsWithPagination(
             @RequestParam(defaultValue = "0") int page,
@@ -44,12 +50,14 @@ public class ProductController {
     }
 
     // id ile ürün getir
+    @Operation(summary = "ID ile ürün getir", description = "Verilen ID'ye göre ürün döner")
     @GetMapping("/{id}")
     public ProductResponse getProductById(@PathVariable Long id) {
         return productService.getProductById(id);
     }
 
     // ürün güncelle
+    @Operation(summary = "Ürün güncelle", description = "Verilen ID'ye göre ürünü günceller")
     @PutMapping("/{id}")
     public ProductResponse updateProduct(@PathVariable Long id,
                                          @Valid @RequestBody CreateProductRequest request) {
@@ -57,6 +65,7 @@ public class ProductController {
     }
 
     // ürün sil
+    @Operation(summary = "Ürün sil", description = "Verilen ID'ye göre ürünü siler")
     @DeleteMapping("/{id}")
     public void deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
