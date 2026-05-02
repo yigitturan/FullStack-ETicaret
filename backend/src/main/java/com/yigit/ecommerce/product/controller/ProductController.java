@@ -10,7 +10,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
+import jakarta.validation.Valid;
+
+//import java.util.List;
 
 @RestController // bu class artık API olacak
 @RequestMapping("/api/products") // base url
@@ -21,7 +23,7 @@ public class ProductController {
 
     // ürün oluştur
     @PostMapping
-    public ProductResponse createProduct(@RequestBody CreateProductRequest request) {
+    public ProductResponse createProduct(@Valid @RequestBody CreateProductRequest request) {
         return productService.createProduct(request);
     }
 
@@ -50,7 +52,7 @@ public class ProductController {
     // ürün güncelle
     @PutMapping("/{id}")
     public ProductResponse updateProduct(@PathVariable Long id,
-                                         @RequestBody CreateProductRequest request) {
+                                         @Valid @RequestBody CreateProductRequest request) {
         return productService.updateProduct(id, request);
     }
 

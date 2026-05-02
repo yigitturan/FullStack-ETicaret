@@ -14,6 +14,9 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.yigit.ecommerce.exception.ProductNotFoundException;
+
+
 @Service // Spring bunu otomatik tanır
 @RequiredArgsConstructor // constructor otomatik oluşur
 public class ProductServiceImpl implements IProductService {
@@ -53,7 +56,7 @@ public class ProductServiceImpl implements IProductService {
     public ProductResponse getProductById(Long id) {
 
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ürün bulunamadı"));
+                .orElseThrow(() -> new ProductNotFoundException("Ürün bulunamadı" + id));
 
         return mapToResponse(product);
     }
@@ -62,7 +65,7 @@ public class ProductServiceImpl implements IProductService {
     public ProductResponse updateProduct(Long id, CreateProductRequest request) {
 
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ürün bulunamadı"));
+                .orElseThrow(() -> new ProductNotFoundException("Ürün bulunamadı" + id));
 
         // güncelleme
         product.setName(request.getName());
@@ -80,8 +83,12 @@ public class ProductServiceImpl implements IProductService {
     @Override
     public void deleteProduct(Long id) {
 
-        productRepository.deleteById(id);
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Ürün bulunamadı. Id: " + id));
+
+        productRepository.delete(product);
     }
+
 
     @Override
     public Page<ProductResponse> getAllProductsWithPagination(Pageable pageable) {
