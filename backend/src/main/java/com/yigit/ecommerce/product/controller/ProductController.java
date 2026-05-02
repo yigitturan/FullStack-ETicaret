@@ -6,6 +6,10 @@ import com.yigit.ecommerce.product.service.IProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 
 @RestController // bu class artık API olacak
@@ -21,10 +25,20 @@ public class ProductController {
         return productService.createProduct(request);
     }
 
-    // tüm ürünleri getir
-    @GetMapping
-    public List<ProductResponse> getAllProducts() {
-        return productService.getAllProducts();
+    // tüm ürünleri getir ESKI------
+    //@GetMapping
+    //public List<ProductResponse> getAllProducts() {
+    //    return productService.getAllProducts();
+    //}
+
+    // ürünleri sayfalı getir
+    @GetMapping("/page")
+    public Page<ProductResponse> getProductsWithPagination(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        return productService.getAllProductsWithPagination(pageable);
     }
 
     // id ile ürün getir
