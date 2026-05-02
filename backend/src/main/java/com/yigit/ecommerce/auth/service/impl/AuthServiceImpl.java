@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.yigit.ecommerce.auth.dto.LoginRequest;
+
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements IAuthService {
@@ -17,6 +19,7 @@ public class AuthServiceImpl implements IAuthService {
     private final IUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    //register
     @Override
     public AuthResponse register(RegisterRequest request) {
 
@@ -39,4 +42,25 @@ public class AuthServiceImpl implements IAuthService {
                 .token("register basarili - token sonra eklenecek")
                 .build();
     }
+
+
+    //login
+    @Override
+    public AuthResponse login(LoginRequest request) {
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("Kullanici bulunamadi"));
+
+        // girilen sifre ile veritabanindaki sifre esit mi kontrol ediyoruz
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new RuntimeException("Email veya sifre hatali");
+        }
+
+        // JWT tokeni bir sonraki adimda burada uretecegiz
+        return AuthResponse.builder()
+                .token("login basarili - token sonra eklenecek")
+                .build();
+    }
+
+
 }
