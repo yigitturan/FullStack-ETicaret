@@ -6,6 +6,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import com.yigit.ecommerce.cart.dto.CartResponse;
+
 @RestController
 @RequestMapping("/api/cart")
 @RequiredArgsConstructor
@@ -16,5 +18,15 @@ public class CartController {
     @PostMapping("/add")
     public void addToCart(@Valid @RequestBody AddToCartRequest request) {
         cartService.addToCart(request);
+    }
+
+    @DeleteMapping("/item/{cartItemId}")
+    public void removeFromCart(@PathVariable Long cartItemId) {
+        cartService.removeFromCart(cartItemId);
+    }
+
+    @GetMapping("/{cartId}")
+    public CartResponse getCart(@PathVariable Long cartId) {
+        return cartService.getCart(cartId);
     }
 }
