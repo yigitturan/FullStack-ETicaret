@@ -10,4 +10,6 @@ public interface ICartService {
     void removeFromCart(Long cartItemId);
 
     CartResponse getCart(Long cartId);
+
+    CartResponse getMyCart();
 }

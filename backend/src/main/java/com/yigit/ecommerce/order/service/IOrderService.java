@@ -6,5 +6,8 @@ public interface IOrderService {
 
     OrderResponse checkout(Long cartId);
 
+    // YENI
+    OrderResponse checkoutMyCart();
+
     OrderResponse getOrderById(Long orderId);
 }

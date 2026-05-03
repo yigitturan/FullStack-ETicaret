@@ -128,4 +128,39 @@ public class OrderServiceImpl implements IOrderService {
                 .items(itemResponses)
                 .build();
     }
+
+    @Override
+    public OrderResponse checkoutMyCart() {
+
+        // login olan user
+        User currentUser = (User) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+
+        // kullanicinin cartini buluyoruz
+        Cart cart = cartRepository.findByUserId(currentUser.getId())
+                .orElseThrow(() -> new RuntimeException("Kullaniciya ait sepet bulunamadi"));
+
+        // sepet bos mu kontrol
+        if (cart.getItems() == null || cart.getItems().isEmpty()) {
+            throw new RuntimeException("Sepet bos oldugu icin siparis olusturulamaz");
+        }
+
+        Order order = Order.builder()
+                .user(currentUser)
+                .build();
+
+        List<OrderItem> orderItems = cart.getItems()
+                .stream()
+                .map(cartItem -> mapCartItemToOrderItem(cartItem, order))
+                .toList();
+
+        order.setItems(orderItems);
+
+        Order savedOrder = orderRepository.save(order);
+
+        return mapToResponse(savedOrder);
+    }
+
+
 }

@@ -12,9 +12,11 @@ import ProductDetail from "./components/ProductDetail";
 
 import { login, register } from "./services/authService";
 import { getProducts } from "./services/productService";
-import { addToCart, getCart, removeFromCart } from "./services/cartService";
+import { addToCart, getMyCart, removeFromCart } from "./services/cartService";
 import { checkout } from "./services/orderService";
 import { payOrder } from "./services/paymentService";
+
+import { checkoutMyCart } from "./services/orderService";
 
 function App() {
   // sayfa gecislerini burada tutuyorum
@@ -74,8 +76,8 @@ function App() {
   };
 
   const loadCart = () => {
-    // backend tarafinda simdilik cartId sabit oldugu icin 1 kullaniyorum
-    getCart(1)
+      // artik sabit cartId kullanmiyorum, backend token'dan kullaniciyi buluyor
+    getMyCart()
       .then((data) => setCart(data))
       .catch((err) => console.error("Cart hatasi:", err));
   };
@@ -144,7 +146,7 @@ function App() {
 
   const handleCheckout = () => {
     // simdilik sabit cartId ile siparis olusturuyorum
-    checkout(1)
+    checkoutMyCart()
       .then((data) => {
         setOrder(data);
         setPayment(null);

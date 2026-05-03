@@ -12,9 +12,16 @@ public class OrderController {
 
     private final IOrderService orderService;
 
+    // eski endpoint kalsin (swagger vs icin)
     @PostMapping("/checkout/{cartId}")
     public OrderResponse checkout(@PathVariable Long cartId) {
         return orderService.checkout(cartId);
+    }
+
+    // YENI - asil kullanilacak endpoint
+    @PostMapping("/checkout/my-cart")
+    public OrderResponse checkoutMyCart() {
+        return orderService.checkoutMyCart();
     }
 
     @GetMapping("/{orderId}")

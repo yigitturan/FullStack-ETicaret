@@ -1,5 +1,6 @@
 package com.yigit.ecommerce.cart.entity;
 
+import com.yigit.ecommerce.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -21,7 +22,13 @@ public class Cart {
 
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL)
+    // her kullanicinin kendine ait sepeti olsun diye user ile bagliyorum
+    @OneToOne
+    @JoinColumn(name = "user_id", unique = true)
+    private User user;
+
+    // sepet silinirse icindeki urunler de silinsin diye cascade kullaniyorum
+    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CartItem> items;
 
     @PrePersist

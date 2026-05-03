@@ -10,7 +10,13 @@ export const addToCart = async (productId, quantity = 1) => {
     return response.data;
 };
 
-// sepeti getiriyoruz
+// login olan kullanicinin kendi sepetini getiriyoruz
+export const getMyCart = async () => {
+    const response = await api.get("/api/cart/my-cart");
+    return response.data;
+};
+
+// eski yapi kalsin diye bunu simdilik silmiyorum
 export const getCart = async (cartId) => {
     const response = await api.get(`/api/cart/${cartId}`);
     return response.data;
