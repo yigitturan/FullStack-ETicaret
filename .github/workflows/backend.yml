@@ -3,6 +3,8 @@ name: Backend CI
 on:
   push:
     branches: [ "develop", "feature/ai-assistant" ]
+  pull_request:
+    branches: [ "develop", "feature/ai-assistant" ]
 
 jobs:
   build:
@@ -10,38 +12,33 @@ jobs:
 
     steps:
       - name: Repo cek
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Java kur
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
+          cache: maven
 
       - name: Maven wrapper izni ver
         run: chmod +x mvnw
         working-directory: backend
 
-      - name: Build al
-        run: ./mvnw clean install -DskipTests
+      - name: Testleri calistir
+        run: ./mvnw clean test
         working-directory: backend
 
       - name: Slack Success Notification
         if: success()
         run: |
           curl -X POST -H "Content-type: application/json" \
-          --data "{\"text\":\"✅ y11 Backend CI basariyla tamamlandi 🚀\"}" \
+          --data "{\"text\":\"✅ y11 Backend testleri basariyla tamamlandi 🚀\"}" \
           "${{ secrets.SLACK_WEBHOOK_URL }}"
 
       - name: Slack Failure Notification
         if: failure()
         run: |
           curl -X POST -H "Content-type: application/json" \
-          --data "{\"text\":\"❌ y11 Backend CI hata verdi!\"}" \
-          "${{ secrets.SLACK_WEBHOOK_URL }}"
-
-      - name: Slack Test Notification
-        run: |
-          curl -X POST -H "Content-type: application/json" \
-          --data "{\"text\":\"🧪 y11 Slack test bildirimi\"}" \
+          --data "{\"text\":\"❌ y11 Backend testleri hata verdi!\"}" \
           "${{ secrets.SLACK_WEBHOOK_URL }}"
