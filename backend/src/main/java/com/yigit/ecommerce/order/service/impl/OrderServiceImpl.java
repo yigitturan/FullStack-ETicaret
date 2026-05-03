@@ -9,7 +9,10 @@ import com.yigit.ecommerce.order.entity.Order;
 import com.yigit.ecommerce.order.entity.OrderItem;
 import com.yigit.ecommerce.order.repository.IOrderRepository;
 import com.yigit.ecommerce.order.service.IOrderService;
+import com.yigit.ecommerce.user.entity.User;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -22,28 +25,40 @@ public class OrderServiceImpl implements IOrderService {
     private final IOrderRepository orderRepository;
     private final ICartRepository cartRepository;
 
-
-
     @Override
     public OrderResponse checkout(Long cartId) {
 
-        Cart cart = cartRepository.findById(cartId)
-                .orElseThrow(() -> new RuntimeException("Sepet bulunamadı. Id: " + cartId));
+        // login olan kullaniciyi security contextten aliyoruz
+        User currentUser = (User) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
 
+        // once sepet var mi onu buluyoruz
+        Cart cart = cartRepository.findById(cartId)
+                .orElseThrow(() -> new RuntimeException("Sepet bulunamadi. Id: " + cartId));
+
+        // sepet bos ise siparis olusturmuyoruz
         if (cart.getItems() == null || cart.getItems().isEmpty()) {
-            throw new RuntimeException("Sepet boş olduğu için sipariş oluşturulamaz");
+            throw new RuntimeException("Sepet bos oldugu icin siparis olusturulamaz");
         }
 
+        // once order nesnesini olusturuyoruz
+        // itemlari birazdan set edecegiz cunku itemlar order referansina ihtiyac duyuyor
         Order order = Order.builder()
+                .user(currentUser)
                 .build();
 
+        // cart itemlari order item'a ceviriyoruz
+        // burada urun bilgilerini snapshot olarak aliyoruz
         List<OrderItem> orderItems = cart.getItems()
                 .stream()
                 .map(cartItem -> mapCartItemToOrderItem(cartItem, order))
                 .toList();
 
+        // order ile itemlari birbirine bagliyoruz
         order.setItems(orderItems);
 
+        // order db'ye kaydediliyor
         Order savedOrder = orderRepository.save(order);
 
         return mapToResponse(savedOrder);
@@ -52,8 +67,21 @@ public class OrderServiceImpl implements IOrderService {
     @Override
     public OrderResponse getOrderById(Long orderId) {
 
+        // login olan kullaniciyi aliyoruz
+        User currentUser = (User) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+
+        // order var mi kontrol ediyoruz
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Sipariş bulunamadı. Id: " + orderId));
+                .orElseThrow(() -> new RuntimeException("Siparis bulunamadi. Id: " + orderId));
+
+        // admin herkesin siparisini gorebilir
+        // user sadece kendi siparisini gorebilir
+        if (!order.getUser().getId().equals(currentUser.getId())
+                && !currentUser.getRole().name().equals("ADMIN")) {
+            throw new RuntimeException("Bu siparise erisim yetkin yok");
+        }
 
         return mapToResponse(order);
     }
@@ -92,12 +120,12 @@ public class OrderServiceImpl implements IOrderService {
 
         return OrderResponse.builder()
                 .orderId(order.getId())
+                .userId(order.getUser().getId())
+                .userEmail(order.getUser().getEmail())
                 .status(order.getStatus())
-                .createdAt(order.getCreatedAt())
                 .totalAmount(totalAmount)
+                .createdAt(order.getCreatedAt())
                 .items(itemResponses)
                 .build();
-
-
     }
 }

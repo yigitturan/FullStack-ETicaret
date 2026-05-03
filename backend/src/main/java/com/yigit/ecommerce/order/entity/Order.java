@@ -6,6 +6,8 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.yigit.ecommerce.user.entity.User;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -36,4 +38,9 @@ public class Order {
         this.createdAt = LocalDateTime.now();
         this.status = "CREATED"; // default status
     }
+
+    // bu order hangi kullaniciya ait onu tutuyoruz
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 }
