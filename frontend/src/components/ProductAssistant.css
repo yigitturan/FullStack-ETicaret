@@ -1,0 +1,31 @@
+.assistant-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: white;
+
+  border: none;
+  padding: 16px 22px;
+  border-radius: 999px;
+
+  font-size: 16px;
+  font-weight: 600;
+
+  cursor: pointer;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  box-shadow: 0 8px 25px rgba(124, 58, 237, 0.5);
+
+  transition: all 0.2s ease;
+}
+
+.assistant-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 30px rgba(124, 58, 237, 0.7);
+}
