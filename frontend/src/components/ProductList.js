@@ -1,6 +1,6 @@
 import ProductCard from "./ProductCard";
 
-function ProductList({ products, loading, onAddToCart }) {
+function ProductList({ products, loading, onAddToCart, onProductClick }) {
   if (loading) {
     return <p className="info-text">Urunler yukleniyor...</p>;
   }
@@ -16,6 +16,7 @@ function ProductList({ products, loading, onAddToCart }) {
           key={product.id}
           product={product}
           onAddToCart={onAddToCart}
+          onProductClick={onProductClick}
         />
       ))}
     </div>

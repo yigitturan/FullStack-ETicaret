@@ -8,6 +8,7 @@ import CategoryFilter from "./components/CategoryFilter";
 import ProductList from "./components/ProductList";
 import CartPanel from "./components/CartPanel";
 import Footer from "./components/Footer";
+import ProductDetail from "./components/ProductDetail";
 
 import { login, register } from "./services/authService";
 import { getProducts } from "./services/productService";
@@ -16,20 +17,29 @@ import { checkout } from "./services/orderService";
 import { payOrder } from "./services/paymentService";
 
 function App() {
+  // sayfa gecislerini burada tutuyorum
+  // router kullanmadigim icin simdilik activePage ile yonetiyorum
   const [activePage, setActivePage] = useState("home");
 
+  // urun, sepet, siparis ve odeme bilgileri
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState(null);
   const [order, setOrder] = useState(null);
   const [payment, setPayment] = useState(null);
 
+  // detay sayfasinda gosterecegim urunu burada tutuyorum
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  // kullanici girisi ve modal bilgileri
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login");
 
+  // kategori ve arama bilgileri
   const [selectedCategory, setSelectedCategory] = useState("Tumu");
   const [searchText, setSearchText] = useState("");
 
+  // pagination bilgileri
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -37,11 +47,13 @@ function App() {
   useEffect(() => {
     const token = localStorage.getItem("token");
 
+    // token varsa kullaniciyi giris yapmis kabul ediyorum
     if (token) {
       setIsLoggedIn(true);
       loadCart();
     }
 
+    // uygulama ilk acildiginda urunleri getiriyorum
     loadProducts(0);
   }, []);
 
@@ -62,13 +74,14 @@ function App() {
   };
 
   const loadCart = () => {
-    // backend tarafinda simdilik cartId sabit oldugu icin 1 kullaniyoruz
+    // backend tarafinda simdilik cartId sabit oldugu icin 1 kullaniyorum
     getCart(1)
       .then((data) => setCart(data))
       .catch((err) => console.error("Cart hatasi:", err));
   };
 
   const handleAuth = (formData) => {
+    // modal hangi moddaysa ona gore login/register istegi atiyorum
     const request =
       authMode === "login"
         ? login({ email: formData.email, password: formData.password })
@@ -92,15 +105,18 @@ function App() {
   };
 
   const handleLogout = () => {
+    // cikis yapinca kullaniciya ait bilgileri temizliyorum
     localStorage.removeItem("token");
     setIsLoggedIn(false);
     setCart(null);
     setOrder(null);
     setPayment(null);
+    setSelectedProduct(null);
     setActivePage("home");
   };
 
   const handleAddToCart = (productId) => {
+    // giris yapmadan sepete ekleme yapilmasin diye kontrol ediyorum
     if (!isLoggedIn) {
       setAuthMode("login");
       setAuthModalOpen(true);
@@ -111,6 +127,7 @@ function App() {
     addToCart(productId, 1)
       .then(() => {
         loadCart();
+        setActivePage("cart");
         alert("Urun sepete eklendi");
       })
       .catch((err) => {
@@ -126,6 +143,7 @@ function App() {
   };
 
   const handleCheckout = () => {
+    // simdilik sabit cartId ile siparis olusturuyorum
     checkout(1)
       .then((data) => {
         setOrder(data);
@@ -145,6 +163,7 @@ function App() {
       return;
     }
 
+    // kart bilgilerini backend'in bekledigi formata ceviriyorum
     payOrder({
       orderId: order.orderId,
       cardHolderName: card.cardHolderName.trim(),
@@ -163,11 +182,13 @@ function App() {
       });
   };
 
+  // kategorileri backend'den gelen urunlere gore olusturuyorum
   const categories = [
     "Tumu",
     ...new Set(products.map((product) => product.category).filter(Boolean))
   ];
 
+  // secilen kategoriye ve arama metnine gore urunleri filtreliyorum
   const filteredProducts = products.filter((product) => {
     const categoryMatch =
       selectedCategory === "Tumu" || product.category === selectedCategory;
@@ -215,6 +236,10 @@ function App() {
                 products={filteredProducts}
                 loading={loading}
                 onAddToCart={handleAddToCart}
+                onProductClick={(product) => {
+                  setSelectedProduct(product);
+                  setActivePage("productDetail");
+                }}
               />
 
               <div className="pagination">
@@ -234,6 +259,22 @@ function App() {
                 </button>
               </div>
             </section>
+          </main>
+        </>
+      )}
+
+      {activePage === "productDetail" && (
+        <ProductDetail
+          product={selectedProduct}
+          onBack={() => setActivePage("home")}
+          onAddToCart={handleAddToCart}
+        />
+      )}
+
+      {activePage === "cart" && (
+        <main className="cart-page">
+          <section className="cart-page-card">
+            <h1>Sepetim</h1>
 
             <CartPanel
               isLoggedIn={isLoggedIn}
@@ -248,8 +289,8 @@ function App() {
                 setAuthModalOpen(true);
               }}
             />
-          </main>
-        </>
+          </section>
+        </main>
       )}
 
       {activePage === "orders" && (
@@ -295,16 +336,17 @@ function App() {
 
                 <h3>Urunler</h3>
 
-                {order.items && order.items.map((item, index) => (
-                  <div className="order-item" key={index}>
-                    <div>
-                      <b>{item.productName}</b>
-                      <p>Adet: {item.quantity}</p>
-                    </div>
+                {order.items &&
+                  order.items.map((item, index) => (
+                    <div className="order-item" key={index}>
+                      <div>
+                        <b>{item.productName}</b>
+                        <p>Adet: {item.quantity}</p>
+                      </div>
 
-                    <b>{item.totalPrice} TL</b>
-                  </div>
-                ))}
+                      <b>{item.totalPrice} TL</b>
+                    </div>
+                  ))}
 
                 {!payment && (
                   <CartPanel
@@ -325,9 +367,13 @@ function App() {
                 {payment && (
                   <div className="payment-result large">
                     <h3>Odeme Tamamlandi</h3>
-                    <p><b>Status:</b> {payment.status}</p>
+                    <p>
+                      <b>Status:</b> {payment.status}
+                    </p>
                     <p>{payment.message}</p>
-                    <p><b>Tutar:</b> {payment.amount} TL</p>
+                    <p>
+                      <b>Tutar:</b> {payment.amount} TL
+                    </p>
                   </div>
                 )}
               </div>

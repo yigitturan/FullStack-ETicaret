@@ -32,11 +32,23 @@ function Navbar({
            </button>
 
            <button
+                       className={activePage === "cart" ? "nav-btn active-nav" : "nav-btn"}
+                       onClick={() => setActivePage("cart")}
+                     >
+                       🛒 Sepetim
+
+                     </button>
+
+
+           <button
              className={activePage === "orders" ? "nav-btn active-nav" : "nav-btn"}
              onClick={() => setActivePage("orders")}
            >
              📦 Siparislerim
            </button>
+
+
+
          </>
        )}
 

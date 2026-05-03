@@ -1,9 +1,9 @@
-function ProductCard({ product, onAddToCart }) {
+function ProductCard({ product, onAddToCart, onProductClick }) {
   const fallbackImage =
     "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=600&auto=format&fit=crop";
 
   return (
-    <div className="product-card">
+    <div className="product-card" onClick={() => onProductClick(product)}>
       <div className="image-box">
         <img
           src={product.imageUrl || fallbackImage}
@@ -21,7 +21,12 @@ function ProductCard({ product, onAddToCart }) {
           <p className="stock">Stok: {product.stockQuantity}</p>
         </div>
 
-        <button onClick={() => onAddToCart(product.id)}>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddToCart(product.id);
+          }}
+        >
           Sepete Ekle
         </button>
       </div>
