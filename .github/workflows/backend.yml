@@ -2,7 +2,7 @@ name: Backend CI
 
 on:
   push:
-    branches: [ "develop" ]
+    branches: [ "develop", "feature/ai-assistant" ]
 
 jobs:
   build:
@@ -29,13 +29,19 @@ jobs:
       - name: Slack Success Notification
         if: success()
         run: |
-          curl -X POST -H 'Content-type: application/json' \
-          --data '{"text":"✅ y11 Backend CI basariyla tamamlandi 🚀"}' \
-          ${{ secrets.SLACK_WEBHOOK_URL }}
+          curl -X POST -H "Content-type: application/json" \
+          --data "{\"text\":\"✅ y11 Backend CI basariyla tamamlandi 🚀\"}" \
+          "${{ secrets.SLACK_WEBHOOK_URL }}"
 
       - name: Slack Failure Notification
         if: failure()
         run: |
-          curl -X POST -H 'Content-type: application/json' \
-          --data '{"text":"❌ y11 Backend CI hata verdi!"}' \
-          ${{ secrets.SLACK_WEBHOOK_URL }}
+          curl -X POST -H "Content-type: application/json" \
+          --data "{\"text\":\"❌ y11 Backend CI hata verdi!\"}" \
+          "${{ secrets.SLACK_WEBHOOK_URL }}"
+
+      - name: Slack Test Notification
+        run: |
+          curl -X POST -H "Content-type: application/json" \
+          --data "{\"text\":\"🧪 y11 Slack test bildirimi\"}" \
+          "${{ secrets.SLACK_WEBHOOK_URL }}"
