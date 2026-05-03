@@ -12,12 +12,16 @@ import org.springframework.stereotype.Service;
 
 import com.yigit.ecommerce.auth.dto.LoginRequest;
 
+import com.yigit.ecommerce.security.JwtService;
+
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements IAuthService {
 
     private final IUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
+    private final JwtService jwtService;
 
     //register
     @Override
@@ -37,10 +41,19 @@ public class AuthServiceImpl implements IAuthService {
 
         userRepository.save(user);
 
+        /*
         // token kismini bir sonraki adimda gercek JWT ile dolduracagiz
         return AuthResponse.builder()
                 .token("register basarili - token sonra eklenecek")
                 .build();
+
+         */
+        String token = jwtService.generateToken(user);
+
+        return AuthResponse.builder()
+                .token(token)
+                .build();
+
     }
 
 
@@ -56,11 +69,22 @@ public class AuthServiceImpl implements IAuthService {
             throw new RuntimeException("Email veya sifre hatali");
         }
 
+        /*
+
         // JWT tokeni bir sonraki adimda burada uretecegiz
         return AuthResponse.builder()
                 .token("login basarili - token sonra eklenecek")
                 .build();
     }
 
+         */
 
+        String token = jwtService.generateToken(user);
+
+        return AuthResponse.builder()
+                .token(token)
+                .build();
+
+
+    }
 }
