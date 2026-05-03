@@ -50,7 +50,7 @@ class PaymentServiceImplTest {
         PaymentRequest request = PaymentRequest.builder()
                 .orderId(1L)
                 .cardHolderName("John Doe")
-                .cardNumber("5528790033300008")
+                .cardNumber("552808")
                 .expireMonth("12")
                 .expireYear("2030")
                 .cvc("123")
