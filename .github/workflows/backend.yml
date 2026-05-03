@@ -19,7 +19,9 @@ jobs:
           distribution: 'temurin'
 
       - name: Maven wrapper izni ver
-        run: chmod +x ./backend/mvnw
+        run: chmod +x mvnw
+        working-directory: backend
 
       - name: Build al
-        run: ./backend/mvnw clean install
+        run: ./mvnw clean install
+        working-directory: backend
