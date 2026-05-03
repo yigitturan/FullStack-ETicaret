@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: fullstack-eticaret-postgres
+    environment:
+      POSTGRES_DB: fullstack_eticaret
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Turantos.62
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    container_name: fullstack-eticaret-backend
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres
+    restart: on-failure
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fullstack_eticaret
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: Turantos.62
