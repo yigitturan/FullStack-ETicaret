@@ -43,6 +43,7 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/cart/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/orders/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/api/payments/**").hasAnyRole("USER", "ADMIN")
 
                         .anyRequest().authenticated()
                 )
