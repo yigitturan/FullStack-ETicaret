@@ -18,5 +18,8 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
+      - name: Maven wrapper izni ver
+        run: chmod +x ./backend/mvnw
+
       - name: Build al
         run: ./backend/mvnw clean install
