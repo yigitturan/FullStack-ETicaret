@@ -18,28 +18,28 @@ import { checkoutMyCart } from "./services/orderService";
 import { payOrder } from "./services/paymentService";
 
 function App() {
-
-  // sayfa kontrolu
+  // sayfa gecislerini burada tutuyorum
   const [activePage, setActivePage] = useState("home");
 
-  // data state'leri
+  // urun, sepet, siparis ve odeme bilgileri
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState(null);
   const [order, setOrder] = useState(null);
   const [payment, setPayment] = useState(null);
 
+  // detay sayfasinda gosterecegim urunu burada tutuyorum
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  // auth state
+  // kullanici girisi ve modal bilgileri
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login");
 
-  // filtreler
+  // kategori ve arama bilgileri
   const [selectedCategory, setSelectedCategory] = useState("Tumu");
   const [searchText, setSearchText] = useState("");
 
-  // pagination
+  // pagination bilgileri
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -47,11 +47,13 @@ function App() {
   useEffect(() => {
     const token = localStorage.getItem("token");
 
+    // token varsa kullaniciyi giris yapmis kabul ediyorum
     if (token) {
       setIsLoggedIn(true);
       loadCart();
     }
 
+    // uygulama ilk acildiginda urunleri getiriyorum
     loadProducts(0);
   }, []);
 
@@ -64,21 +66,29 @@ function App() {
         setTotalPages(data.totalPages);
         setPage(pageNumber);
       })
-      .catch((err) => console.error(err))
+      .catch((err) => {
+        console.error("Urun listeleme hatasi:", err);
+      })
       .finally(() => setLoading(false));
   };
 
   const loadCart = () => {
+    // backend token'dan kullaniciyi buluyor
     getMyCart()
-      .then(setCart)
-      .catch(console.error);
+      .then((data) => setCart(data))
+      .catch((err) => console.error("Cart hatasi:", err));
   };
 
   const handleAuth = (formData) => {
+    // modal hangi moddaysa ona gore login/register istegi atiyorum
     const request =
       authMode === "login"
         ? login({ email: formData.email, password: formData.password })
-        : register(formData);
+        : register({
+            fullName: formData.fullName,
+            email: formData.email,
+            password: formData.password,
+          });
 
     request
       .then((res) => {
@@ -87,13 +97,29 @@ function App() {
         setAuthModalOpen(false);
         loadCart();
       })
-      .catch(() => alert("Auth hatasi"));
+      .catch((err) => {
+        console.error("Auth hatasi:", err.response?.data || err);
+        alert("Giris / kayit islemi basarisiz");
+      });
+  };
+
+  const handleLogout = () => {
+    // cikis yapinca kullaniciya ait bilgileri temizliyorum
+    localStorage.removeItem("token");
+    setIsLoggedIn(false);
+    setCart(null);
+    setOrder(null);
+    setPayment(null);
+    setSelectedProduct(null);
+    setActivePage("home");
   };
 
   const handleAddToCart = (productId) => {
+    // giris yapmadan sepete ekleme yapilmasin diye kontrol ediyorum
     if (!isLoggedIn) {
       setAuthMode("login");
       setAuthModalOpen(true);
+      alert("Sepete urun eklemek icin once giris yapmalisin");
       return;
     }
 
@@ -101,44 +127,80 @@ function App() {
       .then(() => {
         loadCart();
         setActivePage("cart");
+        alert("Urun sepete eklendi");
       })
-      .catch(console.error);
+      .catch((err) => {
+        console.error("Sepete ekleme hatasi:", err);
+        alert("Urun sepete eklenemedi");
+      });
+  };
+
+  const handleRemoveFromCart = (cartItemId) => {
+    removeFromCart(cartItemId)
+      .then(() => loadCart())
+      .catch((err) => console.error("Sepetten silme hatasi:", err));
   };
 
   const handleCheckout = () => {
     checkoutMyCart()
       .then((data) => {
         setOrder(data);
+        setPayment(null);
         setActivePage("orders");
+        alert("Siparis olusturuldu");
       })
-      .catch(console.error);
+      .catch((err) => {
+        console.error("Checkout hatasi:", err);
+        alert("Siparis olusturulamadi");
+      });
   };
 
   const handlePayment = (card) => {
+    if (!order) {
+      alert("Once siparis olusturmalisin");
+      return;
+    }
+
+    // kart bilgilerini backend'in bekledigi formata ceviriyorum
     payOrder({
       orderId: order.orderId,
-      ...card
+      cardHolderName: card.cardHolderName.trim(),
+      cardNumber: card.cardNumber.replaceAll(" ", ""),
+      expireMonth: card.expireMonth.trim(),
+      expireYear: card.expireYear.trim(),
+      cvc: card.cvc.trim(),
     })
-      .then(setPayment)
-      .catch(console.error);
+      .then((data) => {
+        setPayment(data);
+        alert("Odeme islemi tamamlandi");
+      })
+      .catch((err) => {
+        console.error("Odeme hatasi:", err.response?.data || err);
+        alert("Odeme basarisiz");
+      });
   };
 
+  // kategorileri backend'den gelen urunlere gore olusturuyorum
   const categories = [
     "Tumu",
-    ...new Set(products.map((p) => p.category).filter(Boolean))
+    ...new Set(products.map((product) => product.category).filter(Boolean)),
   ];
 
-  const filteredProducts = products.filter((p) => {
-    return (
-      (selectedCategory === "Tumu" || p.category === selectedCategory) &&
-      (p.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-        p.category?.toLowerCase().includes(searchText.toLowerCase()))
-    );
+  // secilen kategoriye ve arama metnine gore urunleri filtreliyorum
+  const filteredProducts = products.filter((product) => {
+    const categoryMatch =
+      selectedCategory === "Tumu" || product.category === selectedCategory;
+
+    const searchMatch =
+      product.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchText.toLowerCase()) ||
+      product.category?.toLowerCase().includes(searchText.toLowerCase());
+
+    return categoryMatch && searchMatch;
   });
 
   return (
     <>
-      {/* Ana layout */}
       <div>
         <Navbar
           isLoggedIn={isLoggedIn}
@@ -154,27 +216,52 @@ function App() {
             setAuthMode("register");
             setAuthModalOpen(true);
           }}
+          onLogout={handleLogout}
         />
 
         {activePage === "home" && (
           <>
             <HeroSlider />
 
-            <CategoryFilter
-              categories={categories}
-              selectedCategory={selectedCategory}
-              setSelectedCategory={setSelectedCategory}
-            />
+            <main className="main-layout">
+              <section className="content-area">
+                <CategoryFilter
+                  categories={categories}
+                  selectedCategory={selectedCategory}
+                  setSelectedCategory={setSelectedCategory}
+                />
 
-            <ProductList
-              products={filteredProducts}
-              loading={loading}
-              onAddToCart={handleAddToCart}
-              onProductClick={(p) => {
-                setSelectedProduct(p);
-                setActivePage("productDetail");
-              }}
-            />
+                <ProductList
+                  products={filteredProducts}
+                  loading={loading}
+                  onAddToCart={handleAddToCart}
+                  onProductClick={(product) => {
+                    setSelectedProduct(product);
+                    setActivePage("productDetail");
+                  }}
+                />
+
+                <div className="pagination">
+                  <button
+                    disabled={page === 0}
+                    onClick={() => loadProducts(page - 1)}
+                  >
+                    Onceki
+                  </button>
+
+                  <span>
+                    Sayfa {page + 1} / {totalPages || 1}
+                  </span>
+
+                  <button
+                    disabled={page + 1 >= totalPages}
+                    onClick={() => loadProducts(page + 1)}
+                  >
+                    Sonraki
+                  </button>
+                </div>
+              </section>
+            </main>
           </>
         )}
 
@@ -184,6 +271,120 @@ function App() {
             onBack={() => setActivePage("home")}
             onAddToCart={handleAddToCart}
           />
+        )}
+
+        {activePage === "cart" && (
+          <main className="cart-page">
+            <section className="cart-page-card">
+              <h1>Sepetim</h1>
+
+              <CartPanel
+                isLoggedIn={isLoggedIn}
+                cart={cart}
+                order={order}
+                payment={payment}
+                onRemoveFromCart={handleRemoveFromCart}
+                onCheckout={handleCheckout}
+                onPayment={handlePayment}
+                onLoginRequired={() => {
+                  setAuthMode("login");
+                  setAuthModalOpen(true);
+                }}
+              />
+            </section>
+          </main>
+        )}
+
+        {activePage === "orders" && (
+          <main className="orders-page">
+            <section className="orders-card">
+              <h1>Siparislerim</h1>
+
+              {!order && (
+                <div className="empty-order">
+                  <h2>Henuz siparis olusturmadin</h2>
+                  <p>
+                    Urunleri inceleyip sepetine ekleyerek siparis
+                    olusturabilirsin.
+                  </p>
+                  <button onClick={() => setActivePage("home")}>
+                    Alisverise Don
+                  </button>
+                </div>
+              )}
+
+              {order && (
+                <div className="order-detail">
+                  <h2>Siparis Detayi</h2>
+
+                  <div className="order-summary-grid">
+                    <div>
+                      <span>Order ID</span>
+                      <b>{order.orderId}</b>
+                    </div>
+
+                    <div>
+                      <span>Durum</span>
+                      <b>{payment ? "PAID" : order.status}</b>
+                    </div>
+
+                    <div>
+                      <span>Toplam Tutar</span>
+                      <b>{order.totalAmount} TL</b>
+                    </div>
+
+                    <div>
+                      <span>Kullanici</span>
+                      <b>{order.userEmail}</b>
+                    </div>
+                  </div>
+
+                  <h3>Urunler</h3>
+
+                  {order.items &&
+                    order.items.map((item, index) => (
+                      <div className="order-item" key={index}>
+                        <div>
+                          <b>{item.productName}</b>
+                          <p>Adet: {item.quantity}</p>
+                        </div>
+
+                        <b>{item.totalPrice} TL</b>
+                      </div>
+                    ))}
+
+                  {!payment && (
+                    <CartPanel
+                      isLoggedIn={isLoggedIn}
+                      cart={{ items: [] }}
+                      order={order}
+                      payment={payment}
+                      onRemoveFromCart={handleRemoveFromCart}
+                      onCheckout={handleCheckout}
+                      onPayment={handlePayment}
+                      onLoginRequired={() => {
+                        setAuthMode("login");
+                        setAuthModalOpen(true);
+                      }}
+                    />
+                  )}
+
+                  {payment && (
+                    <div className="payment-result large">
+                      <h3>Odeme Tamamlandi</h3>
+                      <p>
+                        <b>Status:</b> {payment.status}
+                      </p>
+                      <p>{payment.message}</p>
+                      <p>
+                        <b>Tutar:</b> {payment.amount} TL
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+          </main>
         )}
 
         <Footer />
@@ -198,8 +399,6 @@ function App() {
         )}
       </div>
 
-      {/*BURASI KRITIK FIX */}
-      {/* Fragment kullandik, artik JSX hatasi yok */}
       <ProductAssistant />
     </>
   );
