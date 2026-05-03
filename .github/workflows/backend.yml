@@ -25,3 +25,17 @@ jobs:
       - name: Build al
         run: ./mvnw clean install -DskipTests
         working-directory: backend
+
+      - name: Slack Success Notification
+        if: success()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"✅ y11 Backend CI basariyla tamamlandi 🚀"}' \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Slack Failure Notification
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"❌ y11 Backend CI hata verdi!"}' \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
