@@ -1,6 +1,6 @@
 import api from "./api";
 
-// urunu sepete eklemek icin backend'e istek atiyoruz
+// urunu sepete ekliyoruz
 export const addToCart = async (productId, quantity = 1) => {
     const response = await api.post("/api/cart/add", {
         productId,
@@ -10,13 +10,13 @@ export const addToCart = async (productId, quantity = 1) => {
     return response.data;
 };
 
-// sepeti backend'den getiriyoruz
+// sepeti getiriyoruz
 export const getCart = async (cartId) => {
     const response = await api.get(`/api/cart/${cartId}`);
     return response.data;
 };
 
-// sepetten urun silmek icin backend'e istek atiyoruz
+// sepetten urun siliyoruz
 export const removeFromCart = async (cartItemId) => {
     const response = await api.delete(`/api/cart/item/${cartItemId}`);
     return response.data;

@@ -1,55 +1,54 @@
 import { useEffect, useState } from "react";
-import { login } from "./services/authService";
+import "./App.css";
+
+import Navbar from "./components/Navbar";
+import AuthModal from "./components/AuthModal";
+import HeroSlider from "./components/HeroSlider";
+import CategoryFilter from "./components/CategoryFilter";
+import ProductList from "./components/ProductList";
+import CartPanel from "./components/CartPanel";
+import Footer from "./components/Footer";
+
+import { login, register } from "./services/authService";
 import { getProducts } from "./services/productService";
 import { addToCart, getCart, removeFromCart } from "./services/cartService";
 import { checkout } from "./services/orderService";
 import { payOrder } from "./services/paymentService";
 
 function App() {
+  const [activePage, setActivePage] = useState("home");
+
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState(null);
+  const [order, setOrder] = useState(null);
+  const [payment, setPayment] = useState(null);
+
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState("login");
+
+  const [selectedCategory, setSelectedCategory] = useState("Tumu");
+  const [searchText, setSearchText] = useState("");
 
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  const [loading, setLoading] = useState(true);
-
-  const [order, setOrder] = useState(null);
-
-  const [payment, setPayment] = useState(null);
-
-  // sayfa ilk acildiginda login oluyoruz, urunleri ve sepeti getiriyoruz
   useEffect(() => {
-    login({
-      email: "admin@test.com",
-      password: "123456"
-    })
-      .then((res) => {
-        // backend'den gelen JWT tokeni sakliyoruz
-        localStorage.setItem("token", res.token);
+    const token = localStorage.getItem("token");
 
-        // token kaydolduktan sonra urunleri getiriyoruz
-        return getProducts(0, 10);
-      })
-      .then((data) => {
-        setProducts(data.content);
-        setTotalPages(data.totalPages);
-        setLoading(false);
+    if (token) {
+      setIsLoggedIn(true);
+      loadCart();
+    }
 
-        // urunler geldikten sonra sepeti de getiriyoruz
-        loadCart();
-      })
-      .catch((err) => {
-        console.error("HATA:", err);
-        setLoading(false);
-      });
+    loadProducts(0);
   }, []);
 
-  // urunleri sayfali sekilde getirir
-  const loadPage = (pageNumber) => {
+  const loadProducts = (pageNumber = 0) => {
     setLoading(true);
 
-    getProducts(pageNumber, 10)
+    getProducts(pageNumber, 8)
       .then((data) => {
         setProducts(data.content);
         setTotalPages(data.totalPages);
@@ -62,27 +61,57 @@ function App() {
       });
   };
 
-  // sepeti backend'den getirir
   const loadCart = () => {
-    // simdilik cartId = 1 kullaniyoruz
+    // backend tarafinda simdilik cartId sabit oldugu icin 1 kullaniyoruz
     getCart(1)
-      .then((data) => {
-        setCart(data);
+      .then((data) => setCart(data))
+      .catch((err) => console.error("Cart hatasi:", err));
+  };
+
+  const handleAuth = (formData) => {
+    const request =
+      authMode === "login"
+        ? login({ email: formData.email, password: formData.password })
+        : register({
+            fullName: formData.fullName,
+            email: formData.email,
+            password: formData.password
+          });
+
+    request
+      .then((res) => {
+        localStorage.setItem("token", res.token);
+        setIsLoggedIn(true);
+        setAuthModalOpen(false);
+        loadCart();
       })
       .catch((err) => {
-        console.error("Cart hatasi:", err);
+        console.error("Auth hatasi:", err.response?.data || err);
+        alert("Giris / kayit islemi basarisiz");
       });
   };
 
-  // urunu sepete ekler
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setIsLoggedIn(false);
+    setCart(null);
+    setOrder(null);
+    setPayment(null);
+    setActivePage("home");
+  };
+
   const handleAddToCart = (productId) => {
-    // simdilik her tiklamada 1 adet ekliyoruz
+    if (!isLoggedIn) {
+      setAuthMode("login");
+      setAuthModalOpen(true);
+      alert("Sepete urun eklemek icin once giris yapmalisin");
+      return;
+    }
+
     addToCart(productId, 1)
       .then(() => {
-        alert("Urun sepete eklendi");
-
-        // urun eklendikten sonra sepeti yeniliyoruz
         loadCart();
+        alert("Urun sepete eklendi");
       })
       .catch((err) => {
         console.error("Sepete ekleme hatasi:", err);
@@ -90,30 +119,19 @@ function App() {
       });
   };
 
-  // sepetten urun siler
   const handleRemoveFromCart = (cartItemId) => {
     removeFromCart(cartItemId)
-      .then(() => {
-        alert("Urun sepetten silindi");
-
-        // silme sonrasi sepeti yeniliyoruz
-        loadCart();
-      })
-      .catch((err) => {
-        console.error("Sepetten silme hatasi:", err);
-        alert("Urun sepetten silinemedi");
-      });
+      .then(() => loadCart())
+      .catch((err) => console.error("Sepetten silme hatasi:", err));
   };
 
-  // sepetten siparis olusturur
   const handleCheckout = () => {
     checkout(1)
       .then((data) => {
         setOrder(data);
+        setPayment(null);
+        setActivePage("orders");
         alert("Siparis olusturuldu");
-
-        // siparis olustuktan sonra sepeti tekrar yeniliyoruz
-        loadCart();
       })
       .catch((err) => {
         console.error("Checkout hatasi:", err);
@@ -121,8 +139,7 @@ function App() {
       });
   };
 
-  // olusan siparis icin odeme yapar
-  const handlePayment = () => {
+  const handlePayment = (card) => {
     if (!order) {
       alert("Once siparis olusturmalisin");
       return;
@@ -130,145 +147,205 @@ function App() {
 
     payOrder({
       orderId: order.orderId,
-      cardHolderName: "John Doe",
-      cardNumber: "5528790000000008",
-      expireMonth: "12",
-      expireYear: "2030",
-      cvc: "123"
+      cardHolderName: card.cardHolderName.trim(),
+      cardNumber: card.cardNumber.replaceAll(" ", ""),
+      expireMonth: card.expireMonth.trim(),
+      expireYear: card.expireYear.trim(),
+      cvc: card.cvc.trim()
     })
       .then((data) => {
         setPayment(data);
         alert("Odeme islemi tamamlandi");
       })
       .catch((err) => {
-        console.error("Odeme hatasi:", err);
+        console.error("Odeme hatasi:", err.response?.data || err);
         alert("Odeme basarisiz");
       });
   };
 
-  if (loading) {
-    return <h2>Yukleniyor...</h2>;
-  }
+  const categories = [
+    "Tumu",
+    ...new Set(products.map((product) => product.category).filter(Boolean))
+  ];
+
+  const filteredProducts = products.filter((product) => {
+    const categoryMatch =
+      selectedCategory === "Tumu" || product.category === selectedCategory;
+
+    const searchMatch =
+      product.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchText.toLowerCase()) ||
+      product.category?.toLowerCase().includes(searchText.toLowerCase());
+
+    return categoryMatch && searchMatch;
+  });
 
   return (
-    <div style={{ padding: "30px" }}>
-      <h1>Urunler</h1>
+    <div>
+      <Navbar
+        isLoggedIn={isLoggedIn}
+        searchText={searchText}
+        setSearchText={setSearchText}
+        activePage={activePage}
+        setActivePage={setActivePage}
+        onLoginClick={() => {
+          setAuthMode("login");
+          setAuthModalOpen(true);
+        }}
+        onRegisterClick={() => {
+          setAuthMode("register");
+          setAuthModalOpen(true);
+        }}
+        onLogout={handleLogout}
+      />
 
-      {products.map((product) => (
-        <div
-          key={product.id}
-          style={{
-            border: "1px solid #ccc",
-            padding: "15px",
-            marginBottom: "10px",
-            borderRadius: "8px"
-          }}
-        >
-          <h3>{product.name}</h3>
-          <p>{product.description}</p>
-          <p><b>Fiyat:</b> {product.price} TL</p>
-          <p><b>Stok:</b> {product.stockQuantity}</p>
-          <p><b>Kategori:</b> {product.category}</p>
+      {activePage === "home" && (
+        <>
+          <HeroSlider />
 
-          <button onClick={() => handleAddToCart(product.id)}>
-            Sepete Ekle
-          </button>
-        </div>
-      ))}
+          <main className="main-layout">
+            <section className="content-area">
+              <CategoryFilter
+                categories={categories}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+              />
 
-      <div style={{ marginTop: "20px" }}>
-        <button disabled={page === 0} onClick={() => loadPage(page - 1)}>
-          Onceki
-        </button>
+              <ProductList
+                products={filteredProducts}
+                loading={loading}
+                onAddToCart={handleAddToCart}
+              />
 
-        <span style={{ margin: "0 15px" }}>
-          Sayfa {page + 1} / {totalPages}
-        </span>
+              <div className="pagination">
+                <button disabled={page === 0} onClick={() => loadProducts(page - 1)}>
+                  Onceki
+                </button>
 
-        <button
-          disabled={page + 1 >= totalPages}
-          onClick={() => loadPage(page + 1)}
-        >
-          Sonraki
-        </button>
-      </div>
+                <span>
+                  Sayfa {page + 1} / {totalPages || 1}
+                </span>
 
-      <hr style={{ margin: "30px 0" }} />
+                <button
+                  disabled={page + 1 >= totalPages}
+                  onClick={() => loadProducts(page + 1)}
+                >
+                  Sonraki
+                </button>
+              </div>
+            </section>
 
-      <h2>Sepet</h2>
-
-      {!cart && <p>Sepet yukleniyor...</p>}
-
-      {cart && cart.items.length === 0 && <p>Sepet bos</p>}
-
-      {cart && cart.items.map((item) => (
-        <div
-          key={item.cartItemId}
-          style={{
-            border: "1px solid #999",
-            padding: "10px",
-            marginBottom: "10px",
-            borderRadius: "8px"
-          }}
-        >
-          <p><b>Urun:</b> {item.productName}</p>
-          <p><b>Adet:</b> {item.quantity}</p>
-          <p><b>Fiyat:</b> {item.price} TL</p>
-
-          <button onClick={() => handleRemoveFromCart(item.cartItemId)}>
-            Sepetten Sil
-          </button>
-        </div>
-      ))}
-
-      {cart && cart.items.length > 0 && (
-        <button onClick={handleCheckout}>
-          Siparis Olustur
-        </button>
+            <CartPanel
+              isLoggedIn={isLoggedIn}
+              cart={cart}
+              order={order}
+              payment={payment}
+              onRemoveFromCart={handleRemoveFromCart}
+              onCheckout={handleCheckout}
+              onPayment={handlePayment}
+              onLoginRequired={() => {
+                setAuthMode("login");
+                setAuthModalOpen(true);
+              }}
+            />
+          </main>
+        </>
       )}
 
-      {order && (
-        <div
-          style={{
-            border: "1px solid green",
-            padding: "15px",
-            marginTop: "20px",
-            borderRadius: "8px"
-          }}
-        >
-          <h2>Olusan Siparis</h2>
-          <p><b>Order ID:</b> {order.orderId}</p>
-          <p><b>Status:</b> {order.status}</p>
-          <p><b>Total:</b> {order.totalAmount} TL</p>
-          <p><b>User:</b> {order.userEmail}</p>
+      {activePage === "orders" && (
+        <main className="orders-page">
+          <section className="orders-card">
+            <h1>Siparislerim</h1>
 
-          <button onClick={handlePayment}>
-            Odeme Yap
-          </button>
+            {!order && (
+              <div className="empty-order">
+                <h2>Henuz siparis olusturmadin</h2>
+                <p>Urunleri inceleyip sepetine ekleyerek siparis olusturabilirsin.</p>
+                <button onClick={() => setActivePage("home")}>
+                  Alisverise Don
+                </button>
+              </div>
+            )}
 
-        </div>
+            {order && (
+              <div className="order-detail">
+                <h2>Siparis Detayi</h2>
 
+                <div className="order-summary-grid">
+                  <div>
+                    <span>Order ID</span>
+                    <b>{order.orderId}</b>
+                  </div>
+
+                  <div>
+                    <span>Durum</span>
+                    <b>{payment ? "PAID" : order.status}</b>
+                  </div>
+
+                  <div>
+                    <span>Toplam Tutar</span>
+                    <b>{order.totalAmount} TL</b>
+                  </div>
+
+                  <div>
+                    <span>Kullanici</span>
+                    <b>{order.userEmail}</b>
+                  </div>
+                </div>
+
+                <h3>Urunler</h3>
+
+                {order.items && order.items.map((item, index) => (
+                  <div className="order-item" key={index}>
+                    <div>
+                      <b>{item.productName}</b>
+                      <p>Adet: {item.quantity}</p>
+                    </div>
+
+                    <b>{item.totalPrice} TL</b>
+                  </div>
+                ))}
+
+                {!payment && (
+                  <CartPanel
+                    isLoggedIn={isLoggedIn}
+                    cart={{ items: [] }}
+                    order={order}
+                    payment={payment}
+                    onRemoveFromCart={handleRemoveFromCart}
+                    onCheckout={handleCheckout}
+                    onPayment={handlePayment}
+                    onLoginRequired={() => {
+                      setAuthMode("login");
+                      setAuthModalOpen(true);
+                    }}
+                  />
+                )}
+
+                {payment && (
+                  <div className="payment-result large">
+                    <h3>Odeme Tamamlandi</h3>
+                    <p><b>Status:</b> {payment.status}</p>
+                    <p>{payment.message}</p>
+                    <p><b>Tutar:</b> {payment.amount} TL</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        </main>
       )}
 
-      {payment && (
-        <div
-          style={{
-            border: "1px solid blue",
-            padding: "15px",
-            marginTop: "20px",
-            borderRadius: "8px"
-          }}
-        >
-          <h2>Odeme Sonucu</h2>
-          <p><b>Payment ID:</b> {payment.paymentId}</p>
-          <p><b>Order ID:</b> {payment.orderId}</p>
-          <p><b>Status:</b> {payment.status}</p>
-          <p><b>Message:</b> {payment.message}</p>
-          <p><b>Amount:</b> {payment.amount} TL</p>
-        </div>
+      <Footer />
+
+      {authModalOpen && (
+        <AuthModal
+          mode={authMode}
+          setMode={setAuthMode}
+          onClose={() => setAuthModalOpen(false)}
+          onSubmit={handleAuth}
+        />
       )}
-
-
     </div>
   );
 }
