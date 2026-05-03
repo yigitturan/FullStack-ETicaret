@@ -1,0 +1,22 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ "develop" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repo cek
+        uses: actions/checkout@v3
+
+      - name: Java kur
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Build al
+        run: ./backend/mvnw clean install
